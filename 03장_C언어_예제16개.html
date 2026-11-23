@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C 언어 3장 · 실행 과정 시각화</title>
+<style>
+
+:root{--ink:#172b3f;--muted:#4d6274;--border:#cfdde6;--ground:#edf3f7;--blue:#155e94;--mint:#0d735e;--rose:#a81d54}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;word-break:keep-all}main{max-width:1170px;padding:24px 14px 30px;margin:auto}h1,h2,h3,p{margin:0}button,select,input{font:inherit}
+.mast{padding:23px clamp(14px,3.5vw,36px);background:#142d45;color:#f6fbff;border-bottom:4px solid #73cfbe;border-radius:13px 13px 0 0}.mast .k{color:#9de7d9;font:800 .76rem ui-monospace,monospace;letter-spacing:.14em}.mast h1{margin:7px 0 4px;font-size:clamp(1.45rem,3.4vw,2.6rem);letter-spacing:-.035em;line-height:1.16}.mast .hint{color:#e3eff7;font-size:.9rem}
+.bar,.body{background:#fff;border:1px solid var(--border);border-top:0}.bar{padding:12px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px}.bar label{font-size:.85rem;font-weight:750}.bar select{max-width:100%;background:#f5f9fc;min-width:10em;border:1px solid #91a8b9;border-radius:6px;padding:5px;color:var(--ink)}.badge{padding:2px 7px;border-radius:99px;background:#e5f4f0;color:#116653;font-size:.78rem;font-weight:750}
+.body{padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;border-radius:0 0 13px 13px}.panel{border:1px solid var(--border);border-radius:10px;min-width:0;overflow:hidden}.panel h2{font-size:1rem;background:#f4f8fb;padding:9px 12px;border-bottom:1px solid var(--border)}.code-scroll{overflow-x:auto}.code{list-style:none;padding:8px 0;margin:0;font:14px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;min-width:max-content}.code li{display:grid;grid-template-columns:1.6rem 2rem 1fr;gap:4px;min-height:1.65em;padding-right:10px}.code code{font:inherit;white-space:pre}.code .num{color:#526777;user-select:none;text-align:right;padding-right:5px}.mark{text-align:center;white-space:nowrap}.prev-line{background:#ebf7f1}.next-line{background:#fff0f5}.prev-line .mark{color:var(--mint)}.next-line .mark{color:var(--rose)}.key{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:.8rem;padding:8px 12px;border-block:1px solid var(--border);color:var(--muted)}.key b{color:var(--mint)}.key span+span b{color:var(--rose)}
+.controls{padding:10px 12px 13px}.controls>label{display:flex;justify-content:space-between;gap:8px;font-size:.84rem}.controls output{font-weight:760;color:var(--blue)}#seek{width:100%;accent-color:var(--blue);margin:5px 0 9px}.buttons{display:flex;flex-wrap:wrap;gap:6px}button{padding:5px 9px;cursor:pointer;border:1px solid #91a8b9;background:#f5f9fc;color:var(--ink);border-radius:6px;font-size:.87rem}button.primary{background:var(--blue);border-color:var(--blue);color:#fff}button:disabled{opacity:.43;cursor:default}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #2488c3;outline-offset:2px}
+.runtime{padding:12px}.out{min-height:50px;margin:5px 0 13px;padding:8px;border:1px solid #afd0e5;background:#f3f9fe;border-radius:6px;font:14px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}.out.empty{color:var(--muted);font-family:inherit}.memhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.memhead h3,.runtime>h3{font-size:.89rem}.memhead span{font-size:.74rem;color:var(--muted)}.board{position:relative;background:#f4f8fb;border:1px solid #d7e4ed;border-radius:8px;padding:9px;min-height:157px}.frame-title{font:800 .86rem ui-monospace,monospace;color:var(--blue);margin-bottom:5px}.mem-grid{display:grid;grid-template-columns:minmax(65px,1fr) minmax(42px,.63fr) minmax(65px,1fr);grid-template-rows:repeat(2,minmax(46px,auto));gap:6px}.slot{min-width:0;position:relative;z-index:1;background:#fff;border:1px solid #adbfcc;border-radius:7px;padding:4px 6px;font:700 .9rem/1.2 ui-monospace,monospace;display:flex;flex-wrap:wrap;align-content:center;align-items:baseline;justify-content:space-between;column-gap:4px}.slot small{width:100%;color:var(--muted);font-size:.61rem;font-weight:600}.slot strong{color:#173957;white-space:nowrap}.slot.changed{border-color:#187c69;background:#e7f6ef}.slot.target{box-shadow:inset 0 0 0 1px #50a1ca}.slot.pending{opacity:.53;border-style:dashed}.slot-a{grid-column:3;grid-row:1}.slot-b{grid-column:3;grid-row:2}.slot-p{grid-column:1;grid-row:1/3;align-self:center}.arrows{position:absolute;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}.follow{color:var(--blue);font-size:.83rem;font-weight:750;margin:5px 0 8px;min-height:1.3em}.heap{padding:6px 8px;border:1px dashed #bccbd6;border-radius:6px;font-size:.8rem;color:var(--muted)}.heap b{color:var(--ink)}.desc{grid-column:1/-1;padding:12px 14px;border:1px solid #b7d8ce;border-radius:8px;background:#edf7f3}.desc h2{font-size:.88rem;color:var(--mint);margin-bottom:3px}.desc p{min-height:1.6em}.foot{font-size:.8rem;color:var(--muted);margin-top:12px;padding:0 3px}
+@media(max-width:750px){main{padding:10px 8px 24px}.body{grid-template-columns:minmax(0,1fr);padding:8px;gap:8px}.code{font-size:.8rem}.mast{padding:15px}.controls,.runtime{padding:8px}.bar{padding:8px 10px}.buttons{gap:4px}}@media(prefers-reduced-motion:no-preference){.slot.changed{animation:flash .38s ease-out both}@keyframes flash{from{background:#c6f1cf}to{background:#e7f6ef}}}
+
+.globalnote{padding:11px 16px;background:#f1f8fb;border:1px solid var(--border);border-top:0;font-size:.87rem}
+.inputbox{display:flex;align-items:end;gap:10px;flex-wrap:wrap;padding:10px 16px;background:#eaf5f1;border:1px solid var(--border);border-top:0}.inputbox label{display:grid;gap:3px;font-size:.8rem;font-weight:750}.inputbox input,.inputbox select{max-width:100%;width:9em;border:1px solid #829dab;border-radius:6px;background:white;padding:5px;color:var(--ink);font:inherit}.inputbox input[aria-invalid=true]{border:2px solid var(--rose)}.inputbox p{flex:1 1 100%;font-size:.8rem;color:#3c5c5f}.inputbox p.err{color:#831934;font-weight:750}
+[hidden]{display:none!important}.output-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}.output-head label{font-size:.74rem;color:var(--muted)}.out{overflow:auto;max-height:15rem;white-space:pre;tab-size:8}.code-scroll{max-height:32rem;position:relative}.code li.comment code{color:#5c6c78}.code li.directive code{color:#36638b}
+.mem2{display:flex;flex-wrap:wrap;gap:7px}.var{min-width:92px;max-width:100%;padding:6px 8px;background:white;border:1px solid #adbfcc;border-radius:7px}.var.changed{background:#e7f6ef;border-color:#187c69}.var .vartype{font-size:.74rem;color:var(--muted);display:block}.var strong{font:750 1rem ui-monospace,SFMono-Regular,Consolas,monospace}.array{flex-basis:100%}.cells{display:flex;gap:3px;flex-wrap:wrap;margin-top:5px}.cells b{font:.78rem ui-monospace,monospace;min-width:1.85em;text-align:center;padding:3px;border:1px solid #b7cdd9;border-radius:4px}.counter{color:var(--muted);font-size:.83rem}.tweak{font-size:.82rem}.status-prompt{font-size:.78rem;color:var(--muted);padding:4px 0 9px}
+.scope{padding-block:6px;color:var(--muted)} .guard{background:#fff0d8;border-color:#e6b365}.guard h2{color:#78471c}</style>
+</head>
+<body>
+<main>
+<header class="mast"><p class="k">C EXECUTION TRACE · CHAPTER 03</p><h1>C 언어 3장 · 변수와 자료형</h1><p class="hint">16개 원본 예제에서 실행 줄, 지역 변수와 출력이 함께 어떻게 바뀌는지 확인합니다.</p></header>
+<div class="bar"><label for="example">실습 예제</label><select id="example" aria-describedby="topic"><option value="1">ex03_01.c · 정수 변수와 덧셈</option><option value="2">ex03_02.c · 부호 있는 정수의 범위</option><option value="3">ex03_03.c · sizeof와 자료형 크기</option><option value="4">ex03_04.c · 정수 오버플로</option><option value="5">ex03_05.c · 정수 언더플로</option><option value="6">ex03_06.c · float와 double 연산</option><option value="7">ex03_07.c · 삼각형과 사각형 넓이</option><option value="8">ex03_08.c · 문자와 ASCII 코드</option><option value="9">ex03_09.c · 같은 수의 여러 진법</option><option value="10">ex03_10.c · float 출력 형식</option><option value="11">ex03_11.c · double 출력 형식</option><option value="13">ex03_13.c · 매크로 PI와 float 넓이</option><option value="14">ex03_14.c · const PI와 double 넓이</option><option value="15">ex03_15.c · 암시적·명시적 변환</option><option value="16">ex03_16.c · double에서 int로 암시적 변환</option><option value="17">ex03_17.c · double에서 int로 명시적 변환</option></select><span class="badge">컴파일 없는 모의 실행</span><label class="tweak" id="repairBox" hidden><input type="checkbox" id="repair"> <span id="repairLabel">학습용 비교</span></label></div>
+<p class="globalnote" id="topic"></p>
+<p class="globalnote scope">수록 범위: ex03_01.c~ex03_17.c 중 확인된 원본 16개. ex03_12.c는 제공된 목록에 없습니다.</p>
+<div class="body">
+<section class="panel" aria-labelledby="codeTitle"><h2 id="codeTitle">01 · C 소스 코드</h2><div class="code-scroll" id="codeScroll"><ol id="code" class="code"></ol></div>
+<div class="key"><span><b>→</b> 방금 실행한 줄</span><span><b>→</b> 다음에 실행할 줄</span></div>
+<div class="controls"><label for="seek">실행 단계 <output id="progress" for="seek"></output></label><input id="seek" type="range" min="0" value="0" aria-label="실행 단계 이동"><div class="buttons"><button id="first">처음</button><button id="prev">이전</button><button id="next" class="primary">다음</button><button id="last">마지막</button><button id="auto" aria-pressed="false">▶ 자동 재생</button></div></div></section>
+<section class="panel" aria-labelledby="runTitle"><h2 id="runTitle">02 · 출력과 메모리</h2><div class="runtime">
+<div class="output-head"><h3>표준 출력 (stdout)</h3><label><input type="checkbox" id="spaces"> 공백·탭·줄바꿈 표시</label></div><pre id="output" class="out" aria-label="표준 출력"></pre>
+<div class="memhead"><h3>스택 (Stack)</h3><span>지역 변수의 논리적 표시</span></div><div class="board"><p id="frame" class="frame-title"></p><div id="stack" class="mem2"></div></div>
+<p id="inputstatus" class="status-prompt"></p><p class="heap"><b>힙 (Heap)</b> · 이 예제들은 동적 메모리를 할당하지 않습니다.</p>
+</div></section>
+<section class="desc" id="detail"><h2>03 · 이 단계에서 일어난 일</h2><p id="explain" aria-live="polite"></p></section>
+</div>
+<p class="foot">원본 보기의 소스는 그대로 유지합니다. 크기와 수치 표시는 16비트 short, 32비트 int, 64비트 long long 및 IEEE 754 환경을 가정합니다. 이 파일은 지정된 예제만 모의 실행합니다. 화면 참고: <a href="https://pythontutor.com/c.html#mode=edit">Python Tutor C Visualizer</a>.</p>
+<noscript><p>단계별 시각화를 보려면 JavaScript를 켜 주세요.</p></noscript>
+</main>
+<script>
+'use strict';
+const SOURCES={"1": ["#include \u003cstdio.h>", "", "int main()", "{", "\tint a, b, tot;", "", "\ta = 200;", "", "\tb = 100;", "\ttot = a + b;", "", "\tprintf(\"%d\", tot);     // tot 출력", "", "\treturn 0;", "}"], "2": ["////#pragma warning(disable:4146)", "//", "#include \u003cstdio.h>", "int main()", "{", "\tsigned short smallest_short = -32768;", "\tsigned short largest_short = 32767;", "\tsigned int smallest_int = -2147483648LL;", "\tsigned int largest_int = 2147483647LL;", "\tprintf(\"signed short: %d ~ %d\\n\", smallest_short, largest_short);", "\tprintf(\"signed int: %d ~ %d\\n\", smallest_int, largest_int);", "\treturn 0;", "}", "", "//#pragma warning(disable:4146)", "//", "//#include \u003cstdio.h>", "//int main()", "//{", "//\tsigned short smallest_short = -32768;", "//\tsigned short largest_short = 32767;", "//\tsigned int smallest_int = -2147483648;", "//\tsigned int largest_int = 2147483647;", "//\tprintf(\"signed short: %d ~ %d\\n\", smallest_short, largest_short);", "//\tprintf(\"signed int: %d ~ %d\\n\", smallest_int, largest_int);", "//\treturn 0;", "//}"], "3": ["", "#include \u003cstdio.h>", "void main()", "{", "\tshort sh = 12;               // short 정수형 변수", "\tint nt = 155;                // int 정수형 변수", "\tlong long on = 1666;        // long long 정수형 변수", "", "\tprintf(\"자료형의 크기를 알아보는 코드 \\n\");", "\tprintf(\"1. short : %d바이트, %d바이트 \\n\", sizeof(sh), sizeof sh);", "\tprintf(\"2. int : %d바이트, %d바이트 \\n\", sizeof(nt), sizeof nt);", "\tprintf(\"3. long long : %d바이트, %d바이트 \\n\", sizeof(on), sizeof on);", "}", "", "//#include \u003cstdio.h>", "//void main()", "//{", "//\tshort sh = 12;               // short 정수형 변수", "//\tint nt = 155;                // int 정수형 변수", "//\tlong long on = 1666;        // long long 정수형 변수", "//", "//\tprintf(\"자료형의 크기를 알아보는 코드 \\n\");", "//\tprintf(\"1. short : %lld바이트, %lld바이트 \\n\", sizeof(sh), sizeof sh);", "//\tprintf(\"2. int : %lld바이트, %lld바이트 \\n\", sizeof(nt), sizeof nt);", "//\tprintf(\"3. long long : %lld바이트, %lld바이트 \\n\", sizeof(on), sizeof on);", "//}"], "4": ["", "#include \u003cstdio.h>", "void main()", "{", "\tint maxInt = 2147483647;     // int의 최대값으로 초기화 ", "\tint overflow1 =", "\t\tmaxInt + 1;", "", "\tprintf(\"maxInt: %d\\n\", maxInt);", "\tprintf(\"overflow1: %d\\n\", overflow1);", "", "\tunsigned int maxUint = 4294967295U;   // unsigned int의 최댓값", "\tunsigned int overflow2 =", "\t\tmaxUint + 1;", "", "\tprintf(\"maxUint: %u\\n\", maxUint);", "\tprintf(\"overflow2: %u\\n\", overflow2);", "}"], "5": ["#include \u003cstdio.h>", "", "int main(void) {", "    int minInt1 = -2147483648LL;  // int의 최솟값으로 초기화", "", "    int underflow1 = minInt1 - 1;", "", "    printf(\"minInt: %d\\n\", minInt1);", "    printf(\"underflow1: %d\\n\", underflow1);", "", "    unsigned int minInt2 = 0;", "    // 부호 없는 int 0으로 초기화  ", "", "    unsigned int underflow2 = minInt2 - 1;", "", "    printf(\"minInt: %d\\n\", minInt2);", "    printf(\"underflow2: %u\\n\", underflow2);", "", "    return 0;", "}"], "6": ["#include \u003cstdio.h>", "void main()", "{", "    float floatValue1 = 3.14f;     // float 변수선언 및 값 할당", "    float floatValue2 = 2.718f;    // float 변수선언 및 값 할당", "", "    float sumFloat = floatValue1 + floatValue2;", "", "    float productFloat = floatValue1 * floatValue2;", "", "    printf(\"Float Value 1: %f\\n\", floatValue1);", "    printf(\"Float Value 2: %f\\n\", floatValue2);", "    printf(\"Sum (Float): %f\\n\", sumFloat);", "    printf(\"Product (Float): %f\\n\", productFloat);", "", "    double doubleValue1 = 123.456;   // double 변수 선언과 값 할당 ", "    double doubleValue2 = 789.012;   // double 변수 선언과 값 할당", "", "    double sumDouble = doubleValue1 + doubleValue2;", "", "    double productDouble = doubleValue1 * doubleValue2;", "", "    printf(\"Double Value 1: %lf\\n\", doubleValue1);", "    printf(\"Double Value 2: %lf\\n\", doubleValue2);", "    printf(\"Sum (Double): %lf\\n\", sumDouble);", "    printf(\"Product (Double): %lf\\n\", productDouble);", "}"], "7": ["#include \u003cstdio.h>", "int main()", "{", "    float base = 5.0;", "    float height = 3.0;", "", "    float triangleArea = (base * height) / 2.0;", "", "    printf(\"삼각형 넓이: %.2f\\n\", triangleArea);", "", "    double width = 4.0;", "    double rheight = 6.0;", "", "    double rectangleArea = width * rheight;", "", "    printf(\"사각형 넓이: %.2lf\\n\", rectangleArea);", "", "    return 0;", "}"], "8": ["#include \u003cstdio.h>", "", "int main() {", "", "    char alphabet = 'T';", "", "", "    printf(\"alphabet 변수의 값: %c\\n\", alphabet);", "    printf(\"알파벳 'T'에 해당하는 ASCII 코드 값: %d\\n\", alphabet);", "", "    return 0;", "}"], "9": ["#include \u003cstdio.h>", "", "int main() {", "", "    int decimal = 42;           // 10진수 상수 ", "    int hexadecimal = 0x2A;     // 16진수 상수 ", "    int octal = 052;            // 8진수 상수 ", "    int binary = 0b101010;      // 2진수 상수", "", "    printf(\"Decimal: %d\\n\", decimal);", "    printf(\"Hexadecimal: %x\\n\", hexadecimal);", "    printf(\"Octal: %o\\n\", octal);", "    printf(\"Binary: %d\\n\", binary);", "", "    return 0;", "}"], "10": ["#include \u003cstdio.h>", "", "int main() {", "", "    float fscore;", "    fscore = 589.73456F;", "", "    printf(\"fscore: %f\\n\", fscore);", "    printf(\"fscore: %.2f\\n\", fscore);", "    printf(\"fscore: %e\\n\", fscore);", "    printf(\"fscore: %E\\n\", fscore);", "", "    return 0;", "}"], "11": ["#include \u003cstdio.h>", "", "int main() {", "", "    double dscore;", "    dscore = 589.73456;", "", "    printf(\"dscore: %lf\\n\", dscore);", "    printf(\"dscore: %.2lf\\n\", dscore);", "    printf(\"dscore: %e\\n\", dscore);", "    printf(\"dscore: %E\\n\", dscore);", "", "    return 0;", "}"], "13": ["#include \u003cstdio.h>", "#define PI 3.14159265                 ", "", "int main() {", "", "    float radius = 5.0f;", "    float area = 0;", "    area = PI * radius * radius;", "", "    printf(\"반지름 : %.2f\\n\", radius);", "    printf(\"기호상수 PI : %.8f\\n\", PI);", "    printf(\"원의 넓이: %.8f\\n\", area);", "", "    return 0;", "}"], "14": ["#include \u003cstdio.h>", "", "int main() {", "", "    const double PI = 3.14159265;", "", "    double radius = 5.0;", "    double area = 0;", "", "    area = PI * radius * radius;", "", "    printf(\"반지름 : %.2lf\\n\", radius);", "    printf(\"기호상수 PI : %.8lf\\n\", PI);", "    printf(\"원의 넓이: %.8lf\\n\", area);", "", "    return 0;", "}"], "15": ["#include\u003cstdio.h>", "", "int main() {", "", "    int i = 5;", "    double d = 2.2;", "", "    double result1 = i + d;", "    double result2 = i * d;", "    double result3 = (double)i - d;", "    double result4 = (double)i / d;", "", "    printf(\"덧셈 결과: %lf\\n\", result1);", "    printf(\"곱셈 결과: %lf\\n\", result2);", "    printf(\"뺄셈 결과: %lf\\n\", result3);", "    printf(\"나눗셈 결과: %lf\\n\", result4);", "", "    return 0;", "}"], "16": ["#include\u003cstdio.h>", "", "int main() {", "", "    double d = 5.0;", "    int i;", "", "    i = d;", "", "    printf(\"i의 값: %d\\n\", i);", "", "    return 0;", "}"], "17": ["#include\u003cstdio.h>", "", "int main() {", "    double d = 5.0;", "    int i;", "", "    i = (int)d;", "", "    printf(\"i의 값: %d\\n\", i);", "", "    return 0;", "}"]};
+const TITLES={"1": "정수 변수와 덧셈", "2": "부호 있는 정수의 범위", "3": "sizeof와 자료형 크기", "4": "정수 오버플로", "5": "정수 언더플로", "6": "float와 double 연산", "7": "삼각형과 사각형 넓이", "8": "문자와 ASCII 코드", "9": "같은 수의 여러 진법", "10": "float 출력 형식", "11": "double 출력 형식", "13": "매크로 PI와 float 넓이", "14": "const PI와 double 넓이", "15": "암시적·명시적 변환", "16": "double에서 int로 암시적 변환", "17": "double에서 int로 명시적 변환"};
+const notes={
+ 1:'a와 b는 선언만 하면 값이 생기지 않습니다. 값이 대입될 때까지 스택 칸에 ‘미초기화’로 표시합니다.',
+ 2:'16비트 short, 32비트 int를 가정한 예제입니다. printf에 전달되는 short 인수는 이 환경에서 int로 승격됩니다.',
+ 3:'sizeof의 결과는 size_t입니다. 원본의 %d와 자료형이 맞지 않습니다. 원본에서는 해당 줄에서 멈추고, 학습용 비교에서는 %zu와 표준 main 선언으로 바로잡습니다.',
+ 4:'signed int의 범위를 넘는 덧셈은 C에서 결과가 정의되지 않습니다. 학습용 비교를 켜면 그 연산을 생략하고 unsigned int의 순환을 별도로 살펴봅니다.',
+ 5:'signed int 최솟값에서 1을 빼는 동작도 결과가 정의되지 않습니다. 학습용 비교에서는 그 연산을 생략하고, unsigned 0에서 1을 빼는 결과를 봅니다.',
+ 6:'float에는 단정밀도, double에는 배정밀도 값이 저장됩니다. 원본 void main은 표준적인 선언이 아니며 여기서는 본문의 흐름을 교육용으로 재현합니다.',
+ 7:'도형의 너비와 높이, 중간 계산값을 확인합니다. %.2f와 %.2lf는 이 printf에서 모두 소수점 아래 두 자리를 표시합니다.',
+ 8:'같은 char 값이 %c로는 문자, %d로는 정수로 보입니다. 이 예제는 ASCII 환경을 가정합니다.',
+ 9:'네 초기값 표기는 모두 같은 정수 42를 뜻합니다. 0b 리터럴을 지원하는 환경을 가정합니다. 마지막 줄은 %d이므로 2진 표기가 아니라 42를 출력합니다.',
+ 10:'float에 저장된 값을 고정 소수점과 지수 표기로 출력합니다. 출력 자릿수를 줄여도 저장된 값이 바뀌지는 않습니다.',
+ 11:'같은 리터럴을 double에 저장하고 ex03_10.c의 float 결과와 비교합니다.',
+ 13:'#define PI는 전처리기의 치환 규칙입니다. PI는 지역 변수 칸을 만들지 않지만 float area는 스택 모형에 나타납니다.',
+ 14:'const double PI는 값을 바꿀 수 없는 지역 객체입니다. 전처리 매크로와 달리 스택 모형에 지역 이름과 자료형을 표시합니다.',
+ 15:'int와 double의 혼합 연산에서 암시적 변환과 (double) 명시적 변환을 비교합니다.',
+ 16:'double에서 int로 대입할 때 암시적으로 변환됩니다. 이 예제의 원래 값 5.0은 이미 정수 값입니다.',
+ 17:'(int)로 형 변환을 명시합니다. ex03_16.c와 출력은 같지만 코드에서 변환을 적는 방식이 다릅니다.'
+};
+const modelLabels={3:'학습용 비교: main과 %zu 수정',4:'학습용 비교: unsigned 덧셈',5:'학습용 비교: unsigned 뺄셈'};
+function trace(n,repair=false){
+ const code=SOURCES[n].slice(), events=[];
+ const act=(l,why,fn)=>events.push({l,why,fn});
+ const set=(l,key,type,val,why)=>act(l,why,m=>{m.mem[key]={type,val};m.changed.push(key);});
+ const out=(l,s,why)=>act(l,why,m=>{m.output+=s;});
+ const end=(l,implicit=false)=>act(l,implicit?'닫는 중괄호에서 main의 모의 실행이 끝납니다. 출력은 남고 지역 변수는 사라집니다.':'return 0으로 main이 종료됩니다. 출력은 남고 지역 변수는 사라집니다.',m=>{m.mem={};m.ended=true;});
+ const halt=(l,why)=>act(l,why,m=>{m.blocked=true;});
+ const f32=Math.fround, fx=(x,d=6)=>x.toFixed(d);
+ const ln='\n', pi=3.14159265;
+ if(n===1){
+  act(5,'a, b, tot를 선언했습니다. 아직 값은 없습니다.',m=>{for(const k of ['a','b','tot']){m.mem[k]={type:'int',val:null};m.changed.push(k);}});
+  set(7,'a','int',200,'a에 200을 저장합니다.');set(9,'b','int',100,'b에 100을 저장합니다.');
+  set(10,'tot','int',300,'a와 b를 읽어 200 + 100을 계산하고 tot에 300을 저장합니다.');
+  out(12,'300','%d가 tot의 정수 값 300을 출력합니다. 문자열에 줄바꿈은 없습니다.');end(14);
+ }
+ if(n===2){
+  [[6,'smallest_short','signed short',-32768],[7,'largest_short','signed short',32767],[8,'smallest_int','signed int',-2147483648],[9,'largest_int','signed int',2147483647]].forEach(([l,k,t,v])=>set(l,k,t,v,k+'에 '+v+'를 저장합니다.'));
+  out(10,'signed short: -32768 ~ 32767'+ln,'short의 두 범위 끝값을 출력합니다.');out(11,'signed int: -2147483648 ~ 2147483647'+ln,'int의 두 범위 끝값을 출력합니다.');end(12);
+ }
+ if(n===3){
+  if(repair){code[2]='int main(void)';for(const l of [10,11,12])code[l-1]=code[l-1].replaceAll('%d','%zu');}
+  set(5,'sh','short',12,'short 변수 sh를 초기화합니다.');set(6,'nt','int',155,'int 변수 nt를 초기화합니다.');set(7,'on','long long',1666,'long long 변수 on을 초기화합니다.');
+  out(9,'자료형의 크기를 알아보는 코드 '+ln,'첫 안내 문장을 출력합니다.');
+  if(!repair)halt(10,'sizeof 결과는 size_t입니다. %d에 맞는 int가 전달되지 않으므로 출력값을 단정할 수 없습니다. 학습용 비교를 켜서 %zu 사용을 확인하세요.');
+  else{
+   [[10,'1. short',2],[11,'2. int',4],[12,'3. long long',8]].forEach(([l,t,val])=>out(l,t+' : '+val+'바이트, '+val+'바이트 '+ln,'이 환경에서는 '+val+'바이트입니다. sizeof(변수)와 sizeof 변수는 같은 크기입니다.'));
+   end(13,true);
+  }
+ }
+ if(n===4){
+  set(5,'maxInt','int',2147483647,'32비트 signed int의 최댓값을 저장합니다.');
+  if(!repair)halt(7,'6~7행: maxInt + 1은 32비트 signed int로 표현할 수 없습니다. 정의되지 않은 동작이므로 이 뒤의 실제 출력은 예측하지 않습니다.');
+  else {
+   code[2]='int main(void)';code[5]='    // signed 범위 초과 연산은 생략합니다.';code[6]='';code[9]='    // overflow1은 계산하지 않았으므로 출력하지 않습니다.';
+   out(9,'maxInt: 2147483647'+ln,'안전한 비교에서는 signed 최댓값만 확인합니다. 범위를 넘는 덧셈은 실행하지 않습니다.');
+   set(12,'maxUint','unsigned int',4294967295,'32비트 unsigned int의 최댓값을 저장합니다.');
+   set(14,'overflow2','unsigned int',0,'13~14행: unsigned 덧셈은 2의 32제곱을 법으로 계산하므로 0으로 순환합니다.');
+   out(16,'maxUint: 4294967295'+ln,'unsigned 최댓값을 %u로 출력합니다.');out(17,'overflow2: 0'+ln,'순환 결과 0을 출력합니다.');end(18,true);
+  }
+ }
+ if(n===5){
+  set(4,'minInt1','int',-2147483648,'32비트 signed int의 최솟값을 저장합니다.');
+  if(!repair)halt(6,'minInt1 − 1은 32비트 signed int의 범위를 벗어납니다. 정의되지 않은 동작이므로 이후 출력을 예측하지 않습니다.');
+  else{
+   code[5]='    // signed 범위 초과 연산은 생략합니다.';code[8]='    // underflow1은 계산하지 않았으므로 출력하지 않습니다.';code[15]=code[15].replace('%d','%u');
+   out(8,'minInt: -2147483648'+ln,'안전한 비교에서는 signed 최솟값만 출력합니다.');
+   set(11,'minInt2','unsigned int',0,'unsigned int를 0으로 초기화합니다.');set(14,'underflow2','unsigned int',4294967295,'unsigned 0에서 1을 빼면 32비트 최댓값으로 순환합니다.');
+   out(16,'minInt: 0'+ln,'unsigned의 값이므로 학습용 코드에서는 %u 형식으로 표시합니다.');out(17,'underflow2: 4294967295'+ln,'unsigned 순환의 결과를 출력합니다.');end(19);
+  }
+ }
+ if(n===6){
+  const a=f32(3.14),b=f32(2.718),d=123.456,g=789.012;
+  const f=[[4,'floatValue1',a,'3.14f를 float로 저장합니다.'],[5,'floatValue2',b,'2.718f를 float로 저장합니다.'],[7,'sumFloat',f32(a+b),'float 값 두 개의 합을 float에 저장합니다.'],[9,'productFloat',f32(a*b),'float 값 두 개의 곱을 float에 저장합니다.']];
+  f.forEach(([l,k,v,msg])=>set(l,k,'float',v,msg));
+  ['Float Value 1','Float Value 2','Sum (Float)','Product (Float)'].forEach((label,i)=>out(11+i,label+': '+fx(f[i][2])+ln,'float 인수가 printf 호출에서 double로 승격되고 소수점 아래 6자리로 표시됩니다.'));
+  const ff=[[16,'doubleValue1',d],[17,'doubleValue2',g],[19,'sumDouble',d+g],[21,'productDouble',d*g]];
+  ff.forEach(([l,k,v])=>set(l,k,'double',v,k+'의 값을 double로 저장합니다.'));
+  ['Double Value 1','Double Value 2','Sum (Double)','Product (Double)'].forEach((label,i)=>out(23+i,label+': '+fx(ff[i][2])+ln,'double 결과를 소수점 아래 6자리로 표시합니다.'));end(27,true);
+ }
+ if(n===7){
+  set(4,'base','float',5,'삼각형 밑변을 5.0으로 저장합니다.');set(5,'height','float',3,'삼각형 높이를 3.0으로 저장합니다.');set(7,'triangleArea','float',7.5,'밑변 × 높이 ÷ 2로 넓이 7.5를 계산합니다.');out(9,'삼각형 넓이: 7.50'+ln,'%.2f로 두 자리까지 출력합니다.');
+  set(11,'width','double',4,'사각형 너비를 4.0으로 저장합니다.');set(12,'rheight','double',6,'사각형 높이를 6.0으로 저장합니다.');set(14,'rectangleArea','double',24,'너비 × 높이로 넓이 24를 계산합니다.');out(16,'사각형 넓이: 24.00'+ln,'%.2lf로 두 자리까지 출력합니다.');end(18);
+ }
+ if(n===8){
+  set(5,'alphabet','char','T','문자 T를 char에 저장합니다.');out(8,'alphabet 변수의 값: T'+ln,'%c는 문자 T를 표시합니다.');out(9,"알파벳 'T'에 해당하는 ASCII 코드 값: 84"+ln,'%d는 정수로 승격된 문자 코드 84를 표시합니다.');end(11);
+ }
+ if(n===9){
+  ['decimal','hexadecimal','octal','binary'].forEach((k,i)=>set(5+i,k,'int',42,['10진수 42','16진수 0x2A','8진수 052','2진 리터럴 0b101010'][i]+'는 모두 같은 정수 값 42입니다.'));
+  [['Decimal: 42','%d는 정수를 10진수로 표시합니다.'],['Hexadecimal: 2a','값 42의 16진 표기를 보여 줍니다. %x는 unsigned int용 지정자입니다.'],['Octal: 52','값 42의 8진 표기를 보여 줍니다. %o는 unsigned int용 지정자입니다.'],['Binary: 42','출력 지정자는 %d입니다. 변수 이름이 binary여도 42가 출력됩니다.']].forEach(([a,b],i)=>out(10+i,a+ln,b));end(15);
+ }
+ if(n===10||n===11){
+  const f=n===10,k=f?'fscore':'dscore',t=f?'float':'double',v=f?f32(589.73456):589.73456;
+  set(5,k,t,null,k+'를 선언합니다. 아직 초기화되지 않았습니다.');set(6,k,t,v,'리터럴을 '+t+'로 저장합니다.');
+  [fx(v),fx(v,2),v.toExponential(6).replace(/e([+-])(\d)$/,'e$10$2'),v.toExponential(6).replace(/e([+-])(\d)$/,'e$10$2').toUpperCase()].forEach((s,i)=>out(8+i,k+': '+s+ln,['기본 고정 소수점으로 출력합니다.','소수점 아래 2자리로 표시합니다.','소문자 e를 사용하는 지수 표기입니다.','대문자 E를 사용하는 지수 표기입니다.'][i]));end(13);
+ }
+ if(n===13||n===14){
+  const macro=n===13,t=macro?'float':'double',r=macro?6:7,a=macro?f32(pi*5*5):pi*5*5;
+  if(!macro)set(5,'PI','const double',pi,'PI라는 const double 지역 객체를 선언합니다. 이후 대입으로 변경할 수 없습니다.');
+  set(r,'radius',t,5,'반지름 5.0을 저장합니다.');set(r+1,'area',t,0,'넓이 변수 area를 0으로 초기화합니다.');
+  set(macro?8:10,'area',t,a,macro?'매크로 PI의 수치가 계산식에 쓰입니다. 계산 결과를 float에 저장하므로 단정밀도로 반올림됩니다.':'지역 객체 PI를 읽어 계산한 뒤 double로 저장합니다.');
+  const p=macro?10:12;out(p,'반지름 : 5.00'+ln,'반지름을 소수점 아래 2자리로 보여 줍니다.');out(p+1,'기호상수 PI : 3.14159265'+ln,'PI의 값을 소수점 아래 8자리로 보여 줍니다.');out(p+2,'원의 넓이: '+fx(a,8)+ln,'저장된 넓이를 소수점 아래 8자리로 표시합니다. 다른 예제와 끝자리 차이를 비교하세요.');end(macro?14:16);
+ }
+ if(n===15){
+  set(5,'i','int',5,'정수 i를 초기화합니다.');set(6,'d','double',2.2,'double d를 초기화합니다.');
+  const vals=[5+2.2,5*2.2,5-2.2,5/2.2];
+  vals.forEach((v,i)=>set(8+i,'result'+(i+1),'double',v,i<2?'혼합 연산에서 i의 값을 double로 암시적으로 변환합니다.':'(double)i로 계산에 사용할 값을 명시적으로 변환합니다. 원래 i의 자료형은 그대로입니다.'));
+  vals.forEach((v,i)=>out(13+i,['덧셈','곱셈','뺄셈','나눗셈'][i]+' 결과: '+fx(v)+ln,'연산 결과를 소수점 아래 6자리로 표시합니다.'));end(18);
+ }
+ if(n===16||n===17){
+  const explicit=n===17, l=explicit?4:5;
+  set(l,'d','double',5,'double d를 5.0으로 초기화합니다.');set(l+1,'i','int',null,'int i를 선언했습니다. 아직 초기화되지 않았습니다.');
+  set(l+3,'i','int',5,explicit?'(int)d가 d의 값 5.0을 정수 5로 바꿔 i에 저장합니다.':'i가 int이므로 대입 과정에서 d의 값 5.0을 정수 5로 변환합니다.');
+  out(l+5,'i의 값: 5'+ln,'i의 자료형에 맞춰 %d로 출력합니다.');end(l+7);
+ }
+ const m={mem:{},output:'',ended:false,blocked:false,changed:[]};
+ const snap=(l,next,what)=>({l,next,what,mem:{...m.mem},output:m.output,ended:m.ended,blocked:m.blocked,changed:[...m.changed]});
+ const steps=[snap(null,events[0]?.l??null,'main 본문을 한 단계씩 살펴봅니다. 분홍색 화살표는 다음에 실행할 줄입니다.')];
+ events.forEach((o,i)=>{m.changed=[];o.fn(m);steps.push(snap(o.l,events[i+1]?.l??null,o.why));});
+ return {code,steps};
+}
+
+const $=id=>document.getElementById(id);
+let n=1,run=trace(1),at=0,timer=null,rows=[];
+const make=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
+function buildCode(){
+ const root=$('code');root.replaceChildren();let commentBlock=false;
+ rows=run.code.map((text,i)=>{
+  const li=make('li'),mark=make('span','mark'),num=make('span','num',i+1),code=make('code','',text);
+  mark.setAttribute('aria-hidden','true');num.setAttribute('aria-hidden','true');
+  const line=text.trim();
+  if(line.startsWith('/*'))commentBlock=true;
+  if(commentBlock||line.startsWith('//'))li.classList.add('comment');
+  if(commentBlock&&line.includes('*/'))commentBlock=false;
+  if(line.startsWith('#'))li.classList.add('directive');
+  li.append(mark,num,code);root.append(li);return {li,mark};
+ });
+ $('codeScroll').scrollTop=0;
+}
+function stop(){if(timer!==null){clearInterval(timer);timer=null;}$('auto').textContent='▶ 자동 재생';$('auto').setAttribute('aria-pressed','false');}
+function showOutput(s){
+ const raw=s.output;
+ $('output').textContent=raw?($('spaces').checked?raw.replaceAll(' ','␠').replaceAll('\t','⇥').replaceAll('\n','↵\n'):raw):'아직 출력 없음';
+ $('output').classList.toggle('empty',!raw);
+ $('output').scrollTop=$('output').scrollHeight;
+}
+function renderStack(s){
+ const root=$('stack');root.replaceChildren();
+ $('frame').textContent=s.blocked?'main() · 분석 중단':s.ended?'main() 종료':'main()';
+ for(const [key,{type,val}] of Object.entries(s.mem)){
+  const v=val===null?'미초기화':type==='char'?"‘"+val+"’":String(val);
+  const box=make('div','var'+(s.changed.includes(key)?' changed':''));
+  box.append(make('span','vartype',type+' '+key),make('strong','',v));
+  root.append(box);
+ }
+ if(!Object.keys(s.mem).length)root.append(make('p','counter',s.ended?'지역 변수의 수명이 끝났습니다.':'현재 단계에는 표시할 지역 변수가 없습니다.'));
+}
+function render(){
+ const max=run.steps.length-1,s=run.steps[at];
+ rows.forEach((x,i)=>{
+  const p=s.l===i+1,next=s.next===i+1;
+  x.li.classList.toggle('prev-line',p&&!s.blocked);x.li.classList.toggle('next-line',next||(p&&s.blocked));
+  x.mark.textContent=p&&s.blocked?'!':p||next?'→':'';
+  if(next||(p&&s.blocked))x.li.setAttribute('aria-current','step');else x.li.removeAttribute('aria-current');
+ });
+ $('seek').max=max;$('seek').value=at;$('progress').textContent=at+' / '+max;
+ $('first').disabled=$('prev').disabled=at===0;$('last').disabled=$('next').disabled=at===max;
+ showOutput(s);renderStack(s);
+ $('inputstatus').textContent=s.blocked?'표준 C에서 결과를 보장할 수 없는 지점입니다.':'자료형의 크기와 수치는 교안의 가정에 따릅니다.';
+ $('detail').classList.toggle('guard',s.blocked);
+ $('explain').textContent=s.what;
+ const current=rows[(s.next??s.l??1)-1]?.li;
+ if(current){const r=current.getBoundingClientRect(),b=$('codeScroll').getBoundingClientRect();if(r.top<b.top)$('codeScroll').scrollTop+=r.top-b.top;else if(r.bottom>b.bottom)$('codeScroll').scrollTop+=r.bottom-b.bottom;}
+}
+function rebuild(which,comparative=false){
+ stop();n=which;at=0;
+ $('topic').textContent=notes[n];
+ $('repairBox').hidden=!modelLabels[n];$('repairLabel').textContent=modelLabels[n]||'';$('repair').checked=comparative;
+ run=trace(n,comparative);buildCode();render();
+}
+function go(i){at=Math.max(0,Math.min(run.steps.length-1,i));render();}
+function manually(i){stop();go(i);}
+$('example').onchange=()=>rebuild(Number($('example').value));
+$('repair').onchange=()=>rebuild(n,$('repair').checked);
+$('spaces').onchange=()=>showOutput(run.steps[at]);
+$('first').onclick=()=>manually(0);$('prev').onclick=()=>manually(at-1);$('next').onclick=()=>manually(at+1);$('last').onclick=()=>manually(run.steps.length-1);
+$('seek').oninput=()=>manually(Number($('seek').value));
+$('auto').onclick=()=>{if(timer!==null){stop();return;}if(at===run.steps.length-1)go(0);$('auto').textContent='Ⅱ 일시 정지';$('auto').setAttribute('aria-pressed','true');timer=setInterval(()=>{go(at+1);if(at===run.steps.length-1)stop();},950);};
+document.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target.closest('input, select, button, a, textarea, [contenteditable]'))return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();manually(at+(e.key==='ArrowRight'?1:-1));}});
+rebuild(1);
+
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C 실행 시각화 · 포인터가 가리키는 곳</title>
+<style>
+:root{--ink:#172b3f;--muted:#4d6274;--border:#cfdde6;--ground:#edf3f7;--blue:#155e94;--mint:#0d735e;--rose:#a81d54}
+*{box-sizing:border-box}body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;word-break:keep-all}main{max-width:1170px;padding:24px 14px 30px;margin:auto}h1,h2,h3,p{margin:0}button,select,input{font:inherit}
+.mast{padding:23px clamp(14px,3.5vw,36px);background:#142d45;color:#f6fbff;border-bottom:4px solid #73cfbe;border-radius:13px 13px 0 0}.mast .k{color:#9de7d9;font:800 .76rem ui-monospace,monospace;letter-spacing:.14em}.mast h1{margin:7px 0 4px;font-size:clamp(1.45rem,3.4vw,2.6rem);letter-spacing:-.035em;line-height:1.16}.mast .hint{color:#e3eff7;font-size:.9rem}
+.bar,.body{background:#fff;border:1px solid var(--border);border-top:0}.bar{padding:12px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:10px}.bar label{font-size:.85rem;font-weight:750}.bar select{max-width:100%;background:#f5f9fc;min-width:10em;border:1px solid #91a8b9;border-radius:6px;padding:5px;color:var(--ink)}.badge{padding:2px 7px;border-radius:99px;background:#e5f4f0;color:#116653;font-size:.78rem;font-weight:750}
+.body{padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;border-radius:0 0 13px 13px}.panel{border:1px solid var(--border);border-radius:10px;min-width:0;overflow:hidden}.panel h2{font-size:1rem;background:#f4f8fb;padding:9px 12px;border-bottom:1px solid var(--border)}.code-scroll{overflow-x:auto}.code{list-style:none;padding:8px 0;margin:0;font:14px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;min-width:max-content}.code li{display:grid;grid-template-columns:1.6rem 2rem 1fr;gap:4px;min-height:1.65em;padding-right:10px}.code code{font:inherit;white-space:pre}.code .num{color:#526777;user-select:none;text-align:right;padding-right:5px}.mark{text-align:center;white-space:nowrap}.prev-line{background:#ebf7f1}.next-line{background:#fff0f5}.prev-line .mark{color:var(--mint)}.next-line .mark{color:var(--rose)}.key{display:flex;flex-wrap:wrap;gap:5px 12px;font-size:.8rem;padding:8px 12px;border-block:1px solid var(--border);color:var(--muted)}.key b{color:var(--mint)}.key span+span b{color:var(--rose)}
+.controls{padding:10px 12px 13px}.controls>label{display:flex;justify-content:space-between;gap:8px;font-size:.84rem}.controls output{font-weight:760;color:var(--blue)}#seek{width:100%;accent-color:var(--blue);margin:5px 0 9px}.buttons{display:flex;flex-wrap:wrap;gap:6px}button{padding:5px 9px;cursor:pointer;border:1px solid #91a8b9;background:#f5f9fc;color:var(--ink);border-radius:6px;font-size:.87rem}button.primary{background:var(--blue);border-color:var(--blue);color:#fff}button:disabled{opacity:.43;cursor:default}button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #2488c3;outline-offset:2px}
+.runtime{padding:12px}.out{min-height:50px;margin:5px 0 13px;padding:8px;border:1px solid #afd0e5;background:#f3f9fe;border-radius:6px;font:14px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}.out.empty{color:var(--muted);font-family:inherit}.memhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.memhead h3,.runtime>h3{font-size:.89rem}.memhead span{font-size:.74rem;color:var(--muted)}.board{position:relative;background:#f4f8fb;border:1px solid #d7e4ed;border-radius:8px;padding:9px;min-height:157px}.frame-title{font:800 .86rem ui-monospace,monospace;color:var(--blue);margin-bottom:5px}.mem-grid{display:grid;grid-template-columns:minmax(65px,1fr) minmax(42px,.63fr) minmax(65px,1fr);grid-template-rows:repeat(2,minmax(46px,auto));gap:6px}.slot{min-width:0;position:relative;z-index:1;background:#fff;border:1px solid #adbfcc;border-radius:7px;padding:4px 6px;font:700 .9rem/1.2 ui-monospace,monospace;display:flex;flex-wrap:wrap;align-content:center;align-items:baseline;justify-content:space-between;column-gap:4px}.slot small{width:100%;color:var(--muted);font-size:.61rem;font-weight:600}.slot strong{color:#173957;white-space:nowrap}.slot.changed{border-color:#187c69;background:#e7f6ef}.slot.target{box-shadow:inset 0 0 0 1px #50a1ca}.slot.pending{opacity:.53;border-style:dashed}.slot-a{grid-column:3;grid-row:1}.slot-b{grid-column:3;grid-row:2}.slot-p{grid-column:1;grid-row:1/3;align-self:center}.arrows{position:absolute;inset:0;z-index:0;width:100%;height:100%;pointer-events:none}.follow{color:var(--blue);font-size:.83rem;font-weight:750;margin:5px 0 8px;min-height:1.3em}.heap{padding:6px 8px;border:1px dashed #bccbd6;border-radius:6px;font-size:.8rem;color:var(--muted)}.heap b{color:var(--ink)}.desc{grid-column:1/-1;padding:12px 14px;border:1px solid #b7d8ce;border-radius:8px;background:#edf7f3}.desc h2{font-size:.88rem;color:var(--mint);margin-bottom:3px}.desc p{min-height:1.6em}.foot{font-size:.8rem;color:var(--muted);margin-top:12px;padding:0 3px}
+@media(max-width:750px){main{padding:10px 8px 24px}.body{grid-template-columns:minmax(0,1fr);padding:8px;gap:8px}.code{font-size:.8rem}.mast{padding:15px}.controls,.runtime{padding:8px}.bar{padding:8px 10px}.buttons{gap:4px}}@media(prefers-reduced-motion:no-preference){.slot.changed{animation:flash .38s ease-out both}@keyframes flash{from{background:#c6f1cf}to{background:#e7f6ef}}}
+</style>
+</head>
+<body>
+<main>
+<header class="mast"><p class="k">C EXECUTION TRACE</p><h1>C 포인터는 무엇을 바꿀까?</h1><p class="hint">코드 한 줄, 출력, 변수의 값, 포인터 화살표를 한 화면에서 비교합니다.</p></header>
+<div class="bar"><label for="example">실습 예제</label><select id="example"><option value="pointer">① 포인터가 가리키는 곳 바꾸기</option><option value="copy">② 포인터가 가리키는 값 바꾸기</option><option value="basic">③ 첨부 그림처럼 변수 하나 출력하기</option></select><span class="badge">컴파일 없는 수업용 모의 실행</span></div>
+<div class="body">
+<section class="panel" aria-labelledby="codeTitle"><h2 id="codeTitle">01 · C 소스 코드</h2>
+<div class="code-scroll"><ol id="code" class="code" aria-label="줄 번호가 있는 C 코드"></ol></div>
+<div class="key"><span><b>→</b> 방금 실행한 줄</span><span><b>→</b> 다음에 실행할 줄</span></div>
+<div class="controls"><label for="seek">실행 단계 <output id="progress" for="seek"></output></label><input id="seek" type="range" min="0" value="0" aria-label="실행 단계 이동"><div class="buttons"><button id="first">처음</button><button id="prev">이전</button><button id="next" class="primary">다음</button><button id="last">마지막</button><button id="auto" aria-pressed="false">▶ 자동 재생</button></div></div>
+</section>
+<section class="panel" aria-labelledby="runTitle"><h2 id="runTitle">02 · 출력과 메모리</h2>
+<div class="runtime"><h3>표준 출력 (stdout)</h3><pre id="output" class="out"></pre><div class="memhead"><h3>스택 (Stack)</h3><span>지역 변수의 논리적 표시</span></div>
+<div id="board" class="board"><div class="frame-title" id="frame">main()</div>
+<div class="mem-grid"><div class="slot slot-p" id="slot-p"><span>p</span><strong></strong><small>int *</small></div><div class="slot slot-a" id="slot-a"><span>a</span><strong></strong><small>int · 주소 &amp;a</small></div><div class="slot slot-b" id="slot-b"><span>b</span><strong></strong><small>int · 주소 &amp;b</small></div></div>
+<svg class="arrows" id="arrows" aria-hidden="true"><defs><marker id="arrowhead" markerWidth="10" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L9 4.5L0 9Z" fill="#155e94"/></marker></defs><path id="ptrLine" fill="none" stroke="#155e94" stroke-width="2.5" marker-end="url(#arrowhead)"/></svg>
+</div><p id="follow" class="follow"></p><p class="heap"><b>힙 (Heap)</b> · 이 예제는 동적 할당을 하지 않습니다.</p></div>
+</section>
+<section class="desc" aria-labelledby="explTitle"><h2 id="explTitle">03 · 이 단계에서 일어난 일</h2><p id="explain" aria-live="polite"></p></section>
+</div>
+<p class="foot">주소는 실제 숫자 대신 <code>&amp;a</code>, <code>&amp;b</code>로 표시합니다. 이 파일은 목록의 고정 예제만 재현하며 임의의 C 코드를 컴파일하거나 실행하지 않습니다. 화면 구성 참고: <a href="https://pythontutor.com/c.html#mode=edit">Python Tutor C Visualizer</a>.</p>
+<noscript><p>단계별 시각화를 보려면 브라우저에서 JavaScript를 켜 주세요.</p></noscript>
+</main>
+<script>
+'use strict';
+const pointerCode=['#include <stdio.h>','','int main(void) {','    int a = 10, b = 20;','    int *p = &a;','','    *p = 30;','    p = &b;','    *p = 40;','','    printf("a = %d, b = %d\\n", a, b);','    return 0;','}'];
+const basicCode=['#include <stdio.h>','','int main(void) {','    int a = 10;','','    printf("a = %d\\n", a);','    return 0;','}'];
+const variants={pointer:pointerCode,copy:pointerCode.map((x,i)=>i===7?'    *p = b;':x),basic:basicCode};
+// 지정된 예제에만 적용하는 교육용 상태 추적. C 구문 분석기나 컴파일러가 아니다.
+function makeTrace(which){
+ const single=which==='basic', copy=which==='copy', code=variants[which];
+ const lines=single?[4,6,7]:[4,5,7,8,9,11,12];
+ let mem={},target=null,stdout='';
+ const snapshot=(last,next,changed,description,ended=false)=>({last,next,changed,description,ended,mem:{...mem},target,stdout});
+ const steps=[snapshot(null,lines[0],[],'main에 들어왔습니다. 첫 선언문을 실행하면 지역 변수가 나타납니다.')];
+ lines.forEach((line,i)=>{
+  const next=lines[i+1]??null;
+  let changed=[], description, ended=false;
+  if(line===4){mem={a:10,...(single?{}:{b:20})};changed=Object.keys(mem);description=single?'지역 변수 a가 만들어지고 10으로 초기화됩니다.':'지역 변수 a와 b가 만들어지고 각각 10과 20으로 초기화됩니다.';}
+  else if(single&&line===6){stdout='a = '+mem.a+'\n';description='printf가 a에 저장된 값을 표준 출력에 표시합니다.';}
+  else if(!single&&line===5){target='a';changed=['p'];description='&a는 a의 주소입니다. 포인터 p에 그 주소를 저장하므로 화살표가 a로 향합니다.';}
+  else if(!single&&line===7){mem[target]=30;changed=[target];description='*p는 현재 p가 가리키는 변수 a입니다. a의 값이 30으로 바뀌고 화살표는 그대로입니다.';}
+  else if(line===8){if(copy){mem[target]=mem.b;changed=[target];description='*p = b는 b의 값 20을 a에 복사합니다. p가 저장한 주소는 바뀌지 않습니다.';}else{target='b';changed=['p'];description='p = &b는 p에 b의 주소를 저장합니다. a와 b의 값은 그대로이고 화살표만 b로 옮겨갑니다.';}}
+  else if(line===9){mem[target]=40;changed=[target];description='*p = 40은 현재 p가 가리키는 변수 '+target+'에 40을 저장합니다.';}
+  else if(line===11){stdout='a = '+mem.a+', b = '+mem.b+'\n';description='printf가 지금 a와 b에 저장된 값을 표준 출력에 표시합니다.';}
+  else {mem={};target=null;ended=true;description='return 0으로 main이 끝납니다. 지역 변수의 수명은 끝나지만 이미 출력된 문장은 남습니다.';}
+  steps.push(snapshot(line,next,changed,description,ended));
+ });
+ return {code,steps};
+}
+const $=id=>document.getElementById(id);
+let example='pointer',run=makeTrace(example),index=0,timer=null,codeRows=[];
+function buildCode(){
+ $('code').replaceChildren();
+ codeRows=run.code.map((str,i)=>{
+  const li=document.createElement('li'),mark=document.createElement('span'),num=document.createElement('span'),code=document.createElement('code');
+  mark.className='mark';mark.setAttribute('aria-hidden','true');num.className='num';num.textContent=i+1;num.setAttribute('aria-hidden','true');code.textContent=str;
+  li.append(mark,num,code);$('code').append(li);return {li,mark};
+ });
+}
+function value(key,v,changed,target,hide){
+ const el=$('slot-'+key);el.hidden=hide;el.style.display=hide?'none':'';
+ el.querySelector('strong').textContent=v??'—';
+ el.classList.toggle('pending',v==null);el.classList.toggle('changed',changed);el.classList.toggle('target',target);
+}
+function syncArrow(){
+ const s=run.steps[index],path=$('ptrLine');
+ if(!s.target||s.ended){path.removeAttribute('d');return;}
+ const root=$('board').getBoundingClientRect(), a=$('slot-p').getBoundingClientRect(), b=$('slot-'+s.target).getBoundingClientRect();
+ const x=a.right-root.left-1, y=(a.top+a.bottom)/2-root.top-1, ex=b.left-root.left-5, ey=(b.top+b.bottom)/2-root.top-1, mid=(x+ex)/2;
+ path.setAttribute('d','M'+x+','+y+' C'+mid+','+y+' '+mid+','+ey+' '+ex+','+ey);
+}
+function render(){
+ const s=run.steps[index],max=run.steps.length-1;
+ for(const [i,r] of codeRows.entries()){
+  const prev=s.last===i+1,next=s.next===i+1;
+  r.li.classList.toggle('prev-line',prev);r.li.classList.toggle('next-line',next);r.mark.textContent=prev||next?'→':'';
+  if(next)r.li.setAttribute('aria-current','step');else r.li.removeAttribute('aria-current');
+ }
+ $('seek').max=max;$('seek').value=index;$('progress').textContent=index+' / '+max;
+ $('output').textContent=s.stdout||'아직 출력 없음';$('output').classList.toggle('empty',!s.stdout);
+ $('frame').textContent=s.ended?'main() 종료':'main()';
+ const single=example==='basic';
+ value('a',s.mem.a,s.changed.includes('a'),s.target==='a',s.ended);
+ value('b',s.mem.b,s.changed.includes('b'),s.target==='b',s.ended||single);
+ value('p',s.target?'&'+s.target:null,s.changed.includes('p'),false,s.ended||single);
+ $('follow').textContent=s.ended?'지역 변수 없음':s.target?'p → '+s.target+'   ·   *p = '+s.mem[s.target]:single?'지역 변수 a만 사용합니다.':'p에 저장된 주소가 아직 없습니다.';
+ $('explain').textContent=s.description;
+ $('first').disabled=$('prev').disabled=index===0;$('last').disabled=$('next').disabled=index===max;
+ requestAnimationFrame(syncArrow);
+}
+function stop(){if(timer!==null){clearInterval(timer);timer=null;}$('auto').textContent='▶ 자동 재생';$('auto').setAttribute('aria-pressed','false');}
+function go(i){index=Math.max(0,Math.min(run.steps.length-1,i));render();}
+function manual(i){stop();go(i);}
+$('first').onclick=()=>manual(0);$('prev').onclick=()=>manual(index-1);$('next').onclick=()=>manual(index+1);$('last').onclick=()=>manual(run.steps.length-1);
+$('seek').oninput=()=>manual(Number($('seek').value));
+$('example').onchange=()=>{stop();example=$('example').value;run=makeTrace(example);index=0;buildCode();render();};
+$('auto').onclick=()=>{if(timer!==null){stop();return;}if(index===run.steps.length-1)go(0);$('auto').textContent='Ⅱ 일시 정지';$('auto').setAttribute('aria-pressed','true');timer=setInterval(()=>{go(index+1);if(index===run.steps.length-1)stop();},1050);};
+document.addEventListener('keydown',e=>{if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target.closest('input, select, button, a, textarea, [contenteditable]'))return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();manual(index+(e.key==='ArrowRight'?1:-1));}});
+window.addEventListener('resize',syncArrow);
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(syncArrow).observe($('board'));
+buildCode();render();
+</script>
+</body>
+</html>
